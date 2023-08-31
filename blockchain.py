@@ -10,6 +10,11 @@ genesis_block = {       #we use this genesis_block so we won't get error when we
 }
 blockchain = [genesis_block]
 
+participants = {'Max'}  #this is a SET => mutable, unordered list, no duplicates
+                        #we added Max because it is a owner, so it is a participant
+
+#capital letters mean that this is a global constant -> this value should stay unchanged
+MINING_REWARD = 10  #this is a reward that should be given to a person that creates a new block
 
 
 
@@ -24,6 +29,21 @@ def get_last_blockchain_value():
 # One required one (transaction_amount) and one optional one (last_transaction)
 # The optional one is optional because it has a default value => [1]
 
+
+
+
+
+#this will check if participant stil has a balance left 
+#if he has lower balance than it wants to send than this validation would fail
+def verify_transaction(transaction):
+    sender_sent, sender_received = get_balance(transaction['sender'])  
+    #here above when we are getting the balance we calculate how much coins sender sent in previous block
+    #and how many coins does he wants to send in currently open_transactions
+    sender_balance = sender_received - sender_sent
+    if sender_balance >= transaction['amount']:
+        return True
+    else: 
+        return False
 
 
 
@@ -44,7 +64,14 @@ def add_transaction(recipient, sender=owner, amount=1.0):   #if we set sender=ow
         'recipient': recipient,
         'amount': amount
     }
-    open_transactions.append(transaction)   #we store this transaction to open_transactions
+
+    if verify_transaction(transaction):   
+        open_transactions.append(transaction)   #we store this transaction to open_transactions
+        participants.add(sender)                #as the sender is Max this would be duplicated item but this line of code will be ignored since in set only go unique values
+        participants.add(recipient)
+        return True
+    else:
+        return False
 
 
 
@@ -54,6 +81,7 @@ def add_transaction(recipient, sender=owner, amount=1.0):   #if we set sender=ow
 #creates new block to a blockchain
 #when this function is called, new block is created, all open_transactions are added in new block, and new block is then added to blockchain
 #open_transactions are then cleared
+#when we are mining a new block we want to get a reward => this is how coins get into the system
 def mine_block():
     #pass    #pass statement python knows that this function doesn't do anything for now, it's just declared
              #if we don't write pass it would be an error
@@ -70,6 +98,13 @@ def mine_block():
 
     hashed_block = hash_block(last_block)
 
+    reward_transaction = {                             
+        'sender': 'MINING',     #MINING => because it's coming out of the system     
+        'recipient': owner,     #recipient is a person who does the mining
+        'amount': MINING_REWARD     #constant amount
+    }  
+    open_transactions.append(reward_transaction)
+
     """for key in last_block: #if we use for loop on dictionary it will loop through the keys, and not through the values
         value = last_block[key]
         hashed_block = hashed_block + str(value);   #all values of transaction are stringified"""
@@ -83,6 +118,7 @@ def mine_block():
         'transactions': open_transactions
     }  
     blockchain.append(block)
+    return True
     
 
 
@@ -120,6 +156,32 @@ def print_blockchain_elements():
         print(block)
     else:
         print('-' * 20)
+
+
+
+
+#to find out how much coins has participant sent, and how much received
+def get_balance(participant):
+    #we need to find out transactions where this participant was the sender
+    #we need to find amount of every transaction in the block where sender is equal person as participant => there are many transactions inside block
+    #and we also need to find amounts in the whole blockchain which is a list of blocks (and block is a list of transactions)
+    #we are getting amount for a given transaction for all transactions in a block if sender is a participant
+    #and then we go through all the blocks in blockchain
+    tx_sender = [[tx['amount'] for tx in block['transactions'] if tx['sender']==participant] for block in blockchain]     #nested list comprehension
+
+    open_tx_sender = [tx['amount'] for tx in open_transactions['transactions'] if tx['sender']==participant]
+    tx_sender.append(open_tx_sender)        # we now have a list of all transactions for specific sender that are currently saved in all blocks in the blockhain and with transactions that are stil open
+
+    for tx in tx_sender:
+        if len(tx)>0:
+            amount_sent += tx[0]
+
+    tx_recipient = [[tx['amount'] for tx in block['transactions'] if tx['recipient']==participant] for block in blockchain]     #nested list comprehension
+    for tx in tx_recipient:
+        if len(tx)>0:
+            amount_received += tx[0]
+
+    return amount_sent, amount_received #or amount_received - amount_sent
 
 
 
@@ -193,14 +255,20 @@ while waiting_for_input:
         recipient, amount = tx_data             #   DATA UNPACKING => because tx_data is a TUPLE we extract data from TUPLE like this
                                                 #   first element of the TUPLE is stored in recipient, and second one is stored in amount
         # Add the transaction amount to the blockchain
-        add_transaction(recipient, amount=amount)       #   this data is now added to open_transactions
-                                                        #   here we avoid parameter sender because it is optional
-                                                        #   amount = amount => this we need to set if we omit sender parameter
+        if add_transaction(recipient, amount=amount):       #   this data is now added to open_transactions
+                                                            #   here we avoid parameter sender because it is optional
+                                                            #   amount = amount => this we need to set if we omit sender parameter
+            print('Added transaction!')
+        else:
+            print('Transaction failed!')
         print(open_transactions)
     elif user_choice == '2':
-        mine_block()
+        if mine_block():    #we call function mine_block here, and if this function return True open_transaction will be set to []
+            open_transactions = []
     elif user_choice == '3':
         print_blockchain_elements()
+    elif user_choice == '4':
+        print(participants)
     elif user_choice == 'h':
         # Make sure that you don't try to "hack" the blockchain if it's empty
         if len(blockchain) >= 1:
@@ -220,6 +288,8 @@ while waiting_for_input:
         print('Invalid blockchain!')
         # Break out of the loop
         break
+
+    print(get_balance('Max'))
 else:
     print('User left!')
 
