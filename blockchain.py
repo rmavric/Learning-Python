@@ -60,16 +60,25 @@ def mine_block():
     last_block = blockchain[-1]     # this gives us last element in blockchain
                                     # when first time mine_block is executed blockchain list is empty so blockchain[-1] will throw error
 
-    hashed_block = ''
+    # hashed_block = ''
+    # hashed_block = str([last_block[key] for key in last_block]) #list comprehension
+    # this gives us a list of values => and we just put this list to string
 
-    for keys in last_block: #if we use for loop on dictionary it will loop through the keys, and not through the values
-        value = last_block[keys]
-        hashed_block = hashed_block + str(value);
+    # hashed_block = '-'.join([str(last_block[key]) for key in last_block])  
+    # it changes every element of last_block list to string and then joins them using character '-' => so we get hashed_block = -0-[] for example
+    # and we need to use strings because join works only with strings
+
+    hashed_block = hash_block(last_block)
+
+    """for key in last_block: #if we use for loop on dictionary it will loop through the keys, and not through the values
+        value = last_block[key]
+        hashed_block = hashed_block + str(value);   #all values of transaction are stringified"""
+    
     print(hashed_block)
 
 
     block = {       # Dictionary => key - value pairs                       
-        'previous_hash': 'XYZ',      # for now is a dummy
+        'previous_hash': hashed_block,      # for now is a dummy
         'index': len(blockchain),    # this is like an index, because if we have only one block in blockchain, length would be 1, so index of the next one would be 1
         'transactions': open_transactions
     }  
@@ -116,11 +125,24 @@ def print_blockchain_elements():
 
 
 
+def hash_block(block):
+    return '-'.join([str(block[key]) for key in block]) 
+
+
+
+
+
 def verify_chain():
-    """ Verify the current blockchain and return True if it's valid, False otherwise."""
+    # Verify the current blockchain and return True if it's valid, False otherwise.
+
+    # we are hashing values from previous block to the hash key of next block
+    # if hash from previous block doesn't match recalculated hash than validation fails (that means that we changed previous block)
+    # we want to compare stored hash in current block with recalculated hash of previous block
+
+
     # block_index = 0
     is_valid = True
-    for block_index in range(len(blockchain)):
+    """for block_index in range(len(blockchain)):
         if block_index == 0:
             # If we're checking the first block, we should skip the iteration (since there's no previous block)
             continue
@@ -141,12 +163,20 @@ def verify_chain():
     #         break
     #     block_index += 1
     return is_valid
+waiting_for_input = True"""
+   
+    for (index, block) in enumerate(blockchain): # ENUMERATE function => if we wrap a LIST inside ENUMERATE function it will give back a TUPLE which contains INDEX of element and ELEMENT
+        if index == 0:  #we can skip validation for first block => this is genesis block
+            continue
+        if block['previous_hash'] != hash_block(blockchain[index-1]):
+        # block['previous_hash']    => every block that we store has this key
+        # hash_block(blockchain[index-1])   => index is a index of current block so we have previous block and we need to hash it => so if those two are the same validation succeded
+        # if we manipulated previous block this would mean that this should be invalid
+            return False
+    
+    return True
 
 
-
-
-
-waiting_for_input = True
 
 # A while loop for the user input interface
 # It's a loop that exits once waiting_for_input becomes False or when break is called
@@ -174,17 +204,22 @@ while waiting_for_input:
     elif user_choice == 'h':
         # Make sure that you don't try to "hack" the blockchain if it's empty
         if len(blockchain) >= 1:
-            blockchain[0] = [2]
+            # blockchain[0] = [2]
+            blockchain[0] = {       
+                'previous_hash': '',    
+                'index': 0,  
+                'transactions': [{'sender': 'Cris', 'recipient': 'Max', 'amonut': 100.0}]
+            }
     elif user_choice == 'q':
         # This will lead to the loop to exist because it's running condition becomes False
         waiting_for_input = False
     else:
         print('Input was invalid, please pick a value from the list!')
-    # if not verify_chain():
-    #     print_blockchain_elements()
-    #     print('Invalid blockchain!')
-    #     # Break out of the loop
-    #     break
+    if not verify_chain():
+        print_blockchain_elements()
+        print('Invalid blockchain!')
+        # Break out of the loop
+        break
 else:
     print('User left!')
 
@@ -200,3 +235,21 @@ print('Done!')
 #Only transactions that are part of a block have been "processed" and their attached amounts are hence available to the recipient.
 #One Block typically contains more than one Transaction - in this course, we'll simply add all open transactions.
 # Once the Block has been created, the "Open Transactions" are of course cleared.
+
+
+# List comprehension
+# simple_list = [1, 2, 3, 4]
+# doubled_list = []
+# doubled_list = [el*2 for el in simple_list]       #for every element in simple_list multiply every element with 2 => double_list = 2, 4, 6, 8 
+
+# using if condition inside list comprehension
+# dup_list = [el*2 for el in simple_list if el el%2==0]   #we get only 4, 8 => it multiplies only elements that are divideable with 2 
+
+# calc_items = [1, 2]
+# dup_list = [el*2 for el in simple_list if el in calc_items]   #we get only 2, 4 because we multiply only those elements from simple_list that are also inside the calc_items list 
+
+
+# Dict comprehension
+# stats = [('age', 29), ('height', 178), ('weight', 72)]    #this is a LIST of TUPLES
+# dict_stats = {key: value for (key, value) in stats}   #this transforms every key value pair from LIST of TUPLES to DICTIONARY
+                                                        #this is unpacking from TUPLES (key, value) in stats
