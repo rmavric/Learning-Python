@@ -388,6 +388,7 @@ print('Done!')
 # THIS IS A SHALLOW COPY => IT WORKS FINE IF SIMPLE DATA STRUCTURES ARE USED IN LISTS
 #                        => BUT HERE WE USE DICTIONARIES INSIDE LISTS, AND DICTIONARIES ARE MORE COMPLEX DATA STRUCTURES
 #                               -> in this example we need to use deep copy
+# copied_stats = [stat.copy() for stat in stats]    => this now is a deep copy
 
 
 #simple_list = [1,2,3,4]
