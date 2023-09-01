@@ -103,6 +103,16 @@ def mine_block():
         'recipient': owner,     #recipient is a person who does the mining
         'amount': MINING_REWARD     #constant amount
     }  
+
+
+    #copied_transactions = open_transactions     #lists are copied by reference and not by value so this doesn't work
+                                                 #this would mean that both lists would point to the same address in memory
+                                                 #if we change element in copied_list it would also change element in open_transactions list
+                                                 #because they point at the same place in memory
+    copied_transactions = open_transactions[:]      #this will copy the whole list    => : represents range
+                                                    #we can define from 1:10 for example
+                                                    #now if we modified element in copied_transactions it would change only element in 
+                                                    #this list
     open_transactions.append(reward_transaction)
 
     """for key in last_block: #if we use for loop on dictionary it will loop through the keys, and not through the values
@@ -225,8 +235,8 @@ def verify_chain():
     #         break
     #     block_index += 1
     return is_valid
-waiting_for_input = True"""
-   
+"""
+    
     for (index, block) in enumerate(blockchain): # ENUMERATE function => if we wrap a LIST inside ENUMERATE function it will give back a TUPLE which contains INDEX of element and ELEMENT
         if index == 0:  #we can skip validation for first block => this is genesis block
             continue
@@ -239,7 +249,7 @@ waiting_for_input = True"""
     return True
 
 
-
+waiting_for_input = True
 # A while loop for the user input interface
 # It's a loop that exits once waiting_for_input becomes False or when break is called
 while waiting_for_input:
