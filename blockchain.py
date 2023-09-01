@@ -40,6 +40,7 @@ def verify_transaction(transaction):
     #here above when we are getting the balance we calculate how much coins sender sent in previous block
     #and how many coins does he wants to send in currently open_transactions
     sender_balance = sender_received - sender_sent
+    #sender_balance = get_balance(transaction['sender'])
     if sender_balance >= transaction['amount']:
         return True
     else: 
@@ -113,7 +114,8 @@ def mine_block():
                                                     #we can define from 1:10 for example
                                                     #now if we modified element in copied_transactions it would change only element in 
                                                     #this list
-    open_transactions.append(reward_transaction)
+    #open_transactions.append(reward_transaction)       => now we use buttom one
+    copied_transactions.append(reward_transaction)
 
     """for key in last_block: #if we use for loop on dictionary it will loop through the keys, and not through the values
         value = last_block[key]
@@ -125,7 +127,7 @@ def mine_block():
     block = {       # Dictionary => key - value pairs                       
         'previous_hash': hashed_block,      # for now is a dummy
         'index': len(blockchain),    # this is like an index, because if we have only one block in blockchain, length would be 1, so index of the next one would be 1
-        'transactions': open_transactions
+        'transactions': copied_transactions
     }  
     blockchain.append(block)
     return True
@@ -179,19 +181,20 @@ def get_balance(participant):
     #and then we go through all the blocks in blockchain
     tx_sender = [[tx['amount'] for tx in block['transactions'] if tx['sender']==participant] for block in blockchain]     #nested list comprehension
 
-    open_tx_sender = [tx['amount'] for tx in open_transactions['transactions'] if tx['sender']==participant]
+    open_tx_sender = [tx['amount'] for tx in open_transactions if tx['sender']==participant]
     tx_sender.append(open_tx_sender)        # we now have a list of all transactions for specific sender that are currently saved in all blocks in the blockhain and with transactions that are stil open
-
+    amount_sent = 0
     for tx in tx_sender:
         if len(tx)>0:
             amount_sent += tx[0]
 
+    amount_received = 0
     tx_recipient = [[tx['amount'] for tx in block['transactions'] if tx['recipient']==participant] for block in blockchain]     #nested list comprehension
     for tx in tx_recipient:
         if len(tx)>0:
             amount_received += tx[0]
 
-    return amount_sent, amount_received #or amount_received - amount_sent
+    return (amount_sent, amount_received) #or amount_received - amount_sent 
 
 
 
@@ -249,6 +252,22 @@ def verify_chain():
     return True
 
 
+
+
+
+def verify_transactions():
+    # is_valid = True
+    # for tx in open_transactions:
+    #     if verify_transaction(tx):
+    #         is_valid = True
+    #     else:
+    #         is_valid = False
+    # return is_valid
+    return all([verify_transaction(tx) for tx in open_transactions])    # => returns TRUE if all transactions are valid or FALSE if
+                                                                        #    any transaction is invalid
+
+
+
 waiting_for_input = True
 # A while loop for the user input interface
 # It's a loop that exits once waiting_for_input becomes False or when break is called
@@ -257,6 +276,8 @@ while waiting_for_input:
     print('1: Add a new transaction value')
     print('2: Mine a new block')
     print('3: Output the blockchain blocks')
+    print('4: Output participants')
+    print('5: Check transaction validity')
     print('h: Manipulate the chain')
     print('q: Quit')
     user_choice = get_user_choice()
@@ -279,6 +300,11 @@ while waiting_for_input:
         print_blockchain_elements()
     elif user_choice == '4':
         print(participants)
+    elif user_choice == '5':
+        if verify_transactions():
+            print('All transactions are valid!')
+        else: 
+            print('There are invalid transactions!')
     elif user_choice == 'h':
         # Make sure that you don't try to "hack" the blockchain if it's empty
         if len(blockchain) >= 1:
@@ -333,3 +359,71 @@ print('Done!')
 # stats = [('age', 29), ('height', 178), ('weight', 72)]    #this is a LIST of TUPLES
 # dict_stats = {key: value for (key, value) in stats}   #this transforms every key value pair from LIST of TUPLES to DICTIONARY
                                                         #this is unpacking from TUPLES (key, value) in stats
+
+
+
+#Copying one list to another
+#copied_transactions = open_transactions        #lists are copied by reference and not by value so this doesn't work
+                                                 #this would mean that both lists would point to the same address in memory
+                                                 #if we change element in copied_list it would also change element in open_transactions list
+                                                 #because they point at the same place in memory
+#copied_transactions = open_transactions[:]             #this will copy the whole list    => : represents range
+                                                        #we can define from 1:10 for example
+                                                        #now if we modified element in copied_transactions it would change only element in 
+                                                        #this list
+                                    
+#simple_list = [1,2,3,4,5]
+#new_list = None
+#new_list = simple_list[0:3]    => it gives 1, 2, 3 => 0 is starting index, included
+#                               => it goes to the index 3, but element at index 3 is not included
+#new_list = simple_list[:-1]    => it gives all values except the last one
+#                               => it goes from beginning to the -1 from the end
+# IT WORKS ON TUPLE ALSO, on DICTIONARIES and SETs doesn't work because they are not ordered lists
+
+
+#DEEP COPIES
+# stats = [{'name', 'Max'}, {'age', 29}]       => list of dictionaries
+# copied_stats = stats[:]
+# copied_stats[0]['name'] = 'Manuel'    => name is changed from Max to Manuel in copied_stats but also in stats
+# THIS IS A SHALLOW COPY => IT WORKS FINE IF SIMPLE DATA STRUCTURES ARE USED IN LISTS
+#                        => BUT HERE WE USE DICTIONARIES INSIDE LISTS, AND DICTIONARIES ARE MORE COMPLEX DATA STRUCTURES
+#                               -> in this example we need to use deep copy
+
+
+#simple_list = [1,2,3,4]
+#second_list = [1,2,3,4]
+#simple_list == second_list => True because they hold the same values
+#simple_list is second_list => False because they are not the same object in memory
+
+
+#simple_list = [1,2,3,4]
+#simple_list.extend([5,6,7])
+
+
+#d = {'name','Max'}
+#print(d.items())   => this prints list of dictionaries as a TUPLE
+#            =
+#for k,v in d.items():
+#    print (k, v)
+
+
+#tuple1 = (1,2,3)
+#print(tuple1.index(1)) => it prints index of element 1 which is 0
+#                       => if there is no such element in tuple it gives error
+
+
+#del(d['name'])  => it deletes from dictionary  (it also works for lists)
+#del(tuple1[0])  => it doesn't delete because tuple is immutable
+#                            => this is also true for SETs
+
+
+
+#new_list = [True, True, False]
+# any(new_list) => True => it checks if any element is true
+# all(new_list) => False => it checks if all element are true
+
+
+#number_list = [1, 2, 3, -5]
+#[el for el in number_list if el > 0]   => 1, 2, 3
+#[el > 0 for el in number_list]     => True, True, True, False
+#all([el > 0 for el in number_list])    => False, if all are greater than 0
