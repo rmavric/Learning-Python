@@ -1,3 +1,6 @@
+import functools    #package name, gives us access to reduce function
+
+
 # Initializing our (empty) blockchain list
 blockchain = []     # List => mutable, ordered duplicates allowed
 open_transactions = []
@@ -182,17 +185,40 @@ def get_balance(participant):
     tx_sender = [[tx['amount'] for tx in block['transactions'] if tx['sender']==participant] for block in blockchain]     #nested list comprehension
 
     open_tx_sender = [tx['amount'] for tx in open_transactions if tx['sender']==participant]
-    tx_sender.append(open_tx_sender)        # we now have a list of all transactions for specific sender that are currently saved in all blocks in the blockhain and with transactions that are stil open
-    amount_sent = 0
-    for tx in tx_sender:
-        if len(tx)>0:
-            amount_sent += tx[0]
 
-    amount_received = 0
+    tx_sender.append(open_tx_sender)        # we now have a list of all transactions for specific sender that are currently saved in all blocks in the blockhain and with transactions that are stil open
+    print(tx_sender)
+    
+    amount_sent = functools.reduce(lambda tx_sum, tx_amount: tx_sum + sum(tx_amount) if len(tx_amount)> 0 else tx_sum + 0, tx_sender, 0)
+        # first argument => function that will be executed on every step
+                    #    => this function receives last and the current value
+                    #    => tx_sum is last sum of list elements and tx_amount is actually first element of tx_sender 
+                    #       and tx_sender is list of nested list, so we need to access first element of every nested list like in summing logic below
+                    #    => if we don't have first element in tx_amount[0] we need to have if statement
+        # second argument => it receives list on which we want to do reduction
+        # third argument => and receives initial value
+        # simle:list = [1,2,3,4,5,6]    => this code above sums all elements last value = 1, curent value = 2
+        #                               => last value = 3, current value = 3
+        #                               => last value = 6, current value = 4
+        
+        # This fetches received coin amounts of transactions that were already included in blocks of the blockchain
+        # We ignore open transactions here because you shouldn't be able to spend coins before the transaction was confirmed + included in a block
+    
+    
+    #OLD SUMMING LOGIC
+    # amount_sent = 0
+    # for tx in tx_sender:
+    #     if len(tx)>0:
+    #        amount_sent += tx[0]
+
     tx_recipient = [[tx['amount'] for tx in block['transactions'] if tx['recipient']==participant] for block in blockchain]     #nested list comprehension
-    for tx in tx_recipient:
-        if len(tx)>0:
-            amount_received += tx[0]
+    amount_received = functools.reduce(lambda tx_sum, tx_amount: tx_sum + sum(tx_amount) if len(tx_amount)> 0 else tx_sum + 0, tx_recipient, 0)
+
+    #OLD SUMMING LOGIC
+    # amount_received = 0
+    # for tx in tx_recipient:
+    #     if len(tx)>0:
+    #         amount_received += tx[0]
 
     return (amount_sent, amount_received) #or amount_received - amount_sent 
 
@@ -325,7 +351,8 @@ while waiting_for_input:
         # Break out of the loop
         break
 
-    print(get_balance('Max'))
+    # print(get_balance('Max'))
+    print('Balance of {}: {:6.2f}'.format('Max', get_balance('Max')))
 else:
     print('User left!')
 
@@ -428,3 +455,62 @@ print('Done!')
 #[el for el in number_list if el > 0]   => 1, 2, 3
 #[el > 0 for el in number_list]     => True, True, True, False
 #all([el > 0 for el in number_list])    => False, if all are greater than 0
+
+
+
+
+
+#STRINGS
+#name = 'Max'
+#age = 29
+#'I am ' + name + ' and I am ' + str(age) + ' years old.'
+#'I am {0} and I am {1} years old.'.format(name, age)
+#'I am {0} and I am {1} years old. I really am named {0}'.format(name, age)
+
+#'I am {name} and I am {years} years old. I really am named {name}'.format(name=name, years=age)
+
+#f'I am {name} and I am {age} years old.'    => directly references variable names in there
+#f'I am {name} and I am {age:.2f} years old.'    => directly references variable names in there (two decimal points works also)
+
+
+#funds = 150.9723
+#'Funds: {}'.format(funds)  => 150.9723
+#'Funds: {:f}'.format(funds)  => 150.972300, float
+#'Funds: {:.1f}'.format(funds)  => 151.0, float with 1 decimal point, immediately rounds up/down 
+#'Funds: {:10.1f}'.format(funds)  =>        151.0, float with 1 decimal point, but reserves 10 places in front of decimal point 
+
+
+#'I\'m Max' => ok
+#"I'm Max" => ok
+#'I'm Max' => not ok
+
+
+
+
+
+#MAP    => ALTERNATIVE TO LIST COMPREHENSION
+#simple_list = [1,2,3,4]
+# def multiply(el):
+#     return el*2
+
+#map(multiply, simlpe_list) => we get a map object
+        #=> first argument is reference to a function where we define what we want to do with second parameter (with every element in simple_list)
+#list(map(multiply, simple_list))   => we get list of every element times two
+
+#list(map(str, simple_list))    => converts every element of a simple_list o string
+
+
+
+
+
+#LAMBDA FUNCTIONS
+#list(map(lambda el: el*2, simple_list)) => the same as this -> list(map(multiply, simple_list))
+            #=> word lambda defines that this wil be lambda expression
+            #=> after lambda go parameters, and after parameters is : 
+            #=> then we define what we do with parameters
+
+
+
+
+
+# REDUCE => we use if we want to summarize a list to one value only
