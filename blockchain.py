@@ -1,4 +1,15 @@
-import functools    #package name, gives us access to reduce function
+#import functools    #package name, gives us access to reduce function
+from functools import reduce    # => now we import only reduce method from functools and now we don't call reduce method like this functools.reduce()
+                                # now we call it only reduce
+import hashlib as hl     #package for hashing
+import json         #to convert dictionary to string hash
+from collections import OrderedDict     #for order dictionaries because we need to hash them and we need to have the same hash
+                                        #if key-value pairs in dictionaries change positions hash would be different
+
+# Import two functions from our hash_util.py file. Omit the ".py" in the import
+from hash_util import hash_string_256, hash_block
+
+
 
 
 # Initializing our (empty) blockchain list
@@ -9,7 +20,8 @@ genesis_block = {       #we use this genesis_block so we won't get error when we
                         #we add this to the blockchain first, for now
     'previous_hash': '',      # for now is a dummy
     'index': 0,    # this is like an index, because if we have only one block in blockchain, length would be 1, so index of the next one would be 1
-    'transactions': []
+    'transactions': [],
+    'proof': 100        #we need to add this when we included proof of work to our code
 }
 blockchain = [genesis_block]
 
@@ -18,6 +30,91 @@ participants = {'Max'}  #this is a SET => mutable, unordered list, no duplicates
 
 #capital letters mean that this is a global constant -> this value should stay unchanged
 MINING_REWARD = 10  #this is a reward that should be given to a person that creates a new block
+
+
+
+
+
+"""THIS IS ADDED TO HASH_UTIL.PY"""
+# def hash_block(block):
+#     """Hashes a block and returns a string representation of it.
+
+#     Arguments:
+#         :block: The block that should be hashed.
+#     """
+#     # return '-'.join([str(block[key]) for key in block])   
+#     #return hl.sha256(json.dumps(block).encode()).hexdigest()    #BUT THIS IS NOT ACTUALLY CORRECT BECAUSE BLOCK IS A DICTIONARY, 
+#                                                                 #AND KEY-VALUE PAIRS IN DICTIONARIES ARE NOT ORDERED, key-value pairs can change positions
+#                                             # algorithm that creates 64 character hash   => same input results with the same hash
+#                                             # input argument sholud be string, but block is a dictionary
+#                                             # json.dumps(block)  => this will create string but we need to encode it to utf8 
+#                                             # (this is string format that can be used with sha256 algorithm)
+#                                             # this now returns type byte hash and not a string
+#                                             # to make string we use .hexdigest()
+
+#     return hl.sha256(json.dumps(block, sort_keys=True).encode()).hexdigest()    #sort_keys=True => this fixes problem with sorting of key-value pairs
+#                                                                                 #because key-value pairs in dictionaires are not ordered
+#                                                                                 #but in blocks are also lists of transactions that are also dictionaries
+#                                                                                 #the same problem is here
+
+
+
+
+# ADDITIONAL SECURITY MECHANISM
+# control amount of coins, not total amount of coins but speed with which new coins enter our network
+# important concept that ensures that we cannot edit entire blockchain
+# previous block could be edited and all subsequent hashes and than we would have valid block   => proof of work ensures that this is not possible
+# HASH IS GENERATED BASED ON THE BLOCK TRANSACTIONS, PREVIOUS HASH AND PROOF NUMBER (NONCE)
+       # => TRANSACTIONS AND PREVIOUS HASH SHOULD BE INCLUDED IN NEW BLOCK
+       # => WE CHECK IF PROOF OF WORK IS VALID BY COMBINING TRANSACTIONS + PREVIOUS HASH + PROOF TO HASH    => 64 characters
+                   # => WE NEED TO CHECK IF THIS HASH START WITH CERTAIN AMOUNT OF LEADING ZEROS
+                   # => WE ALWAYS GET &$ CHARACTERS FROM THESE INPUTS
+                            # => IF WE CHANGE ANYTHING FROM THESE INPUTS (AND WE CAN CHANGE NUMBER ONLY, BECAUSE TRANSACTIONS AND PREVIOUS HASH ARE SET IN STONE)
+                            # => IF WE CHANGE THAT NUMBER WE GET TOTALLY DIFFERENT HASH
+                            # WE NEED A COUPLE OF TRIES TO GET A HASG THAT STARTS WITH TWO LEADING ZEROS
+                            # THAN THIS PROOF OF WORK IS VALID (if 2 zeros are our criteria), IT TAKES MORE TIME IF WE REQUIRE MORE LEADING ZEROS
+
+# miners that are hones -> when they mine new coins they need to create on new block
+# hakers that want to manipulate with some block need to update hashes in all subsequent block
+
+# contains algorithm for generating hash and checks if it fulfils our difficulty criteria
+def valid_proof(transactions, last_hash, proof):
+    """Validate a proof of work number and see if it solves the puzzle algorithm (two leading 0s)
+
+    Arguments:
+        :transactions: The transactions of the block for which the proof is created.
+        :last_hash: The previous block's hash which will be stored in the current block.
+        :proof: The proof number we're testing.
+    """
+    # Create a string with all the hash inputs
+    guess = (str(transactions) + str(last_hash) + str(proof)).encode()  #endode to utf 8 characters
+
+    # Hash the string
+    # IMPORTANT: This is NOT the same hash as will be stored in the previous_hash. It's a not a block's hash. It's only used for the proof-of-work algorithm.
+    #guess_hash = hl.sha256(guess).hexdigest()   # to convert byte hash type to a string
+    guess_hash = hash_string_256(guess)     # this returns => return hl.sha256(string).hexdigest()
+    
+   
+    print(guess_hash)
+    # Only a hash (which is based on the above inputs) which starts with two 0s is treated as valid
+    # This condition is of course defined by you. You could also require 10 leading 0s - this would take significantly longer (and this allows you to control the speed at which new blocks can be added)
+    
+    return guess_hash[0:2] == '00'  #checks if first two characters are zeros ([0:2] means element with index 0 and 1, index 2 is not included)
+
+
+
+
+
+def proof_of_work():
+    """Generate a proof of work for the open transactions, the hash of the previous block and a random number (which is guessed until it fits)."""
+    last_block = blockchain[-1]     #this fetches last block in blockchain
+    last_hash = hash_block(last_block)      #this is the hash of the last block
+    proof = 0
+    # Try different PoW numbers and return the first valid one
+    while not valid_proof(open_transactions, last_hash, proof):
+        proof += 1
+    return proof    #we will return proof when we find what number is proof that will give guess_hash that starts with "00"
+
 
 
 
@@ -39,11 +136,11 @@ def get_last_blockchain_value():
 #this will check if participant stil has a balance left 
 #if he has lower balance than it wants to send than this validation would fail
 def verify_transaction(transaction):
-    sender_sent, sender_received = get_balance(transaction['sender'])  
+    #sender_sent, sender_received = get_balance(transaction['sender'])  
     #here above when we are getting the balance we calculate how much coins sender sent in previous block
     #and how many coins does he wants to send in currently open_transactions
-    sender_balance = sender_received - sender_sent
-    #sender_balance = get_balance(transaction['sender'])
+    #sender_balance = sender_received - sender_sent
+    sender_balance = get_balance(transaction['sender'])
     if sender_balance >= transaction['amount']:
         return True
     else: 
@@ -63,11 +160,16 @@ def add_transaction(recipient, sender=owner, amount=1.0):   #if we set sender=ow
     """
 
     #   Dictionary => mutable, unordered map, no duplicate keys => key-value pairs
-    transaction = {     
-        'sender': sender,
-        'recipient': recipient,
-        'amount': amount
-    }
+    # transaction = {     
+    #     'sender': sender,
+    #     'recipient': recipient,
+    #     'amount': amount
+    # }
+
+    transaction = OrderedDict(          #we add this to order key value pairs in transactions => this is important to always get the same hash
+                                        #it doesn't take normal dictionary as arguments, it takes list of TUPLES 
+                                        #each TUPLE is key-value pair
+        [('sender', sender), ('recipient', recipient), ('amount', amount)])
 
     if verify_transaction(transaction):   
         open_transactions.append(transaction)   #we store this transaction to open_transactions
@@ -102,11 +204,19 @@ def mine_block():
 
     hashed_block = hash_block(last_block)
 
-    reward_transaction = {                             
-        'sender': 'MINING',     #MINING => because it's coming out of the system     
-        'recipient': owner,     #recipient is a person who does the mining
-        'amount': MINING_REWARD     #constant amount
-    }  
+    proof = proof_of_work()
+
+    # reward_transaction = {                             
+    #     'sender': 'MINING',     #MINING => because it's coming out of the system     
+    #     'recipient': owner,     #recipient is a person who does the mining
+    #     'amount': MINING_REWARD     #constant amount
+    # }  
+
+
+    reward_transaction = OrderedDict(        #we add this to order key value pairs in transactions => this is important to always get the same hash
+                                             #it doesn't take normal dictionary as arguments, it takes list of TUPLES 
+                                             #each TUPLE is key-value pair
+        [('sender', 'MINING'), ('recipient', owner), ('amount', MINING_REWARD)])
 
 
     #copied_transactions = open_transactions     #lists are copied by reference and not by value so this doesn't work
@@ -130,7 +240,8 @@ def mine_block():
     block = {       # Dictionary => key - value pairs                       
         'previous_hash': hashed_block,      # for now is a dummy
         'index': len(blockchain),    # this is like an index, because if we have only one block in blockchain, length would be 1, so index of the next one would be 1
-        'transactions': copied_transactions
+        'transactions': copied_transactions,
+        'proof': proof
     }  
     blockchain.append(block)
     return True
@@ -189,7 +300,9 @@ def get_balance(participant):
     tx_sender.append(open_tx_sender)        # we now have a list of all transactions for specific sender that are currently saved in all blocks in the blockhain and with transactions that are stil open
     print(tx_sender)
     
-    amount_sent = functools.reduce(lambda tx_sum, tx_amount: tx_sum + sum(tx_amount) if len(tx_amount)> 0 else tx_sum + 0, tx_sender, 0)
+    # amount_sent = functools.reduce(lambda tx_sum, tx_amount: tx_sum + sum(tx_amount) if len(tx_amount)> 0 else tx_sum + 0, tx_sender, 0)
+    amount_sent = reduce(lambda tx_sum, tx_amount: tx_sum + sum(tx_amount) if len(tx_amount)> 0 else tx_sum + 0, tx_sender, 0)
+
         # first argument => function that will be executed on every step
                     #    => this function receives last and the current value
                     #    => tx_sum is last sum of list elements and tx_amount is actually first element of tx_sender 
@@ -212,7 +325,9 @@ def get_balance(participant):
     #        amount_sent += tx[0]
 
     tx_recipient = [[tx['amount'] for tx in block['transactions'] if tx['recipient']==participant] for block in blockchain]     #nested list comprehension
-    amount_received = functools.reduce(lambda tx_sum, tx_amount: tx_sum + sum(tx_amount) if len(tx_amount)> 0 else tx_sum + 0, tx_recipient, 0)
+    # amount_received = functools.reduce(lambda tx_sum, tx_amount: tx_sum + sum(tx_amount) if len(tx_amount)> 0 else tx_sum + 0, tx_recipient, 0)
+    amount_received = reduce(lambda tx_sum, tx_amount: tx_sum + sum(tx_amount) if len(tx_amount)> 0 else tx_sum + 0, tx_recipient, 0)
+
 
     #OLD SUMMING LOGIC
     # amount_received = 0
@@ -220,14 +335,8 @@ def get_balance(participant):
     #     if len(tx)>0:
     #         amount_received += tx[0]
 
-    return (amount_sent, amount_received) #or amount_received - amount_sent 
-
-
-
-
-
-def hash_block(block):
-    return '-'.join([str(block[key]) for key in block]) 
+    return amount_received - amount_sent 
+    #return (amount_sent, amount_received) #or amount_received - amount_sent 
 
 
 
@@ -267,12 +376,20 @@ def verify_chain():
 """
     
     for (index, block) in enumerate(blockchain): # ENUMERATE function => if we wrap a LIST inside ENUMERATE function it will give back a TUPLE which contains INDEX of element and ELEMENT
+       
         if index == 0:  #we can skip validation for first block => this is genesis block
             continue
+
         if block['previous_hash'] != hash_block(blockchain[index-1]):
         # block['previous_hash']    => every block that we store has this key
         # hash_block(blockchain[index-1])   => index is a index of current block so we have previous block and we need to hash it => so if those two are the same validation succeded
         # if we manipulated previous block this would mean that this should be invalid
+            return False
+        
+        if not valid_proof(block['transactions'][:-1], block['previous_hash'], block['proof']): #we need to exclude reward_transactions
+                                                                                                # with [:-1] we select all transactions except from the last, 
+                                                                                                # and last is reward_transactions
+            print('Proof of work is invalid')
             return False
     
     return True
