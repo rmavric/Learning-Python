@@ -8,7 +8,7 @@ from collections import OrderedDict     #for order dictionaries because we need 
 
 # Import two functions from our hash_util.py file. Omit the ".py" in the import
 from hash_util import hash_string_256, hash_block
-
+import pickle       # convert python data to binary data => it can serialize and deserialize data
 
 
 
@@ -30,6 +30,116 @@ participants = {'Max'}  #this is a SET => mutable, unordered list, no duplicates
 
 #capital letters mean that this is a global constant -> this value should stay unchanged
 MINING_REWARD = 10  #this is a reward that should be given to a person that creates a new block
+
+
+
+
+# this is not the best way of saving and loading data, because we need some code to translate list data to strings and then translate them
+# back to python objects and lists
+"""
+def load_data():
+    with open('blockchain.txt', 'r') as f:
+        file_content = f.readlines()
+
+        global blockchain               # lines below wanted to create new variables blockchain and open transactions
+        global open_transactions        # that is why we need to tell python that those are global variables
+
+        blockchain = file_content[0]    # first string in our file is blockchain data and the second one are open_transactions
+        open_transactions = file_content[1]
+
+
+load_data()
+
+
+def save_data():
+    with open('blockchain.txt', 'w') as f:
+        f.write(str(blockchain))    # blockchain is a list so we need to convert it to a string, because only strings can be saved in files
+        f.write('\n')
+        f.write(str(open_transactions))     # open_transactions is a list so we need to convert it to a string, because only strings can be saved in files
+"""
+
+
+
+
+### WE NEED TO HAVE BLOCKCHAIN.TXT FILE FIRST
+def load_data():
+    """Initialize blockchain + open transactions data from a file."""
+    global blockchain               # lines below wanted to create new variables blockchain and open transactions
+    global open_transactions        # that is why we need to tell python that those are global variables
+    
+    #with open('blockchain.p', mode='rb') as f:
+    with open('blockchain.txt', mode='r') as f:
+        
+        file_content = f.readlines()
+        
+        # file_content = pickle.loads(f.read())       #this opens binary data and converts to python data
+        #                                             #this should give as dictionary as we created in save data
+        # blockchain = file_content['chain']
+        # open_transactions = file_content['ot']
+        
+        
+        blockchain = json.loads(file_content[0][:-1])       #this deserializes a string => takes string in json format and gives us back python object
+                                                            #this first line includes \n character so we should avoid reading it with [:-1]
+
+
+        # We need to convert the loaded data because Transactions should use OrderedDict
+        updated_blockchain = []
+        for block in blockchain:    #we are going throug every block in blockchain and convert transaction in OrderedDict of transactions
+                                    #because we always need to have the same hash
+                                    #we save then as orderedDict-s but we don't load them as such, so we need to convert transactions to orderedDicts
+            updated_block = {
+                'previous_hash': block['previous_hash'],    #this is unchanged
+                'index': block['index'],                    #this is unchanged
+                'proof': block['proof'],                    #this is unchanged
+                'transactions': [OrderedDict(   #we add this to order key-value pairs in transactions => this is important to always get the same hash
+                                                #it doesn't take normal dictionary as arguments, it takes list of TUPLES 
+                                                #each TUPLE is key-value pair
+                    [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount', tx['amount'])]) for tx in block['transactions']]
+                    #THIS IS A LIST COMPREHENSION
+            }
+            updated_blockchain.append(updated_block)
+        blockchain = updated_blockchain     # we now overwrite originally blockchain read from the file with new updated_blockchain that has
+                                            # transactions converted in orderedDict
+
+
+        open_transactions = json.loads(file_content[1])     #this deserializes a string => takes string in json format and gives us back python object
+        # We need to convert  the loaded data because Transactions should use OrderedDict
+        updated_transactions = []
+        for tx in open_transactions:
+            updated_transaction = OrderedDict(  #we add this to order key-value pairs in transactions => this is important to always get the same hash
+                                                #it doesn't take normal dictionary as arguments, it takes list of TUPLES 
+                                                #each TUPLE is key-value pair
+                [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount', tx['amount'])])
+            updated_transactions.append(updated_transaction)
+        open_transactions = updated_transactions
+
+
+load_data()
+
+
+
+
+
+
+def save_data():
+    """Save blockchain + open transactions snapshot to a file."""
+    #with open('blockchain.p', mode='wb') as f:
+    with open('blockchain.txt', mode='w') as f:
+        f.write(json.dumps(blockchain))         #this will create json string from list blockchain
+        f.write('\n')
+        f.write(json.dumps(open_transactions))  #this will create json string from list open_transactions
+        
+        
+        
+        # save_data = {                       #this object (dictionary) is needed because we cannot add "\n" to binary data
+        #     'chain': blockchain,
+        #     'ot': open_transactions
+        # }
+        # f.write(pickle.dumps(save_data))    #dumps returns binary data that we want to write
+        #                                     #if we want to save binary data to file we need to use mode "wb" (write binary)
+        #                                     #since these data is binary data so we can't add "\n" so we need to store these data like an object
+        #                                     #so above is object created
+    print('Saving failed!')
 
 
 
@@ -166,7 +276,7 @@ def add_transaction(recipient, sender=owner, amount=1.0):   #if we set sender=ow
     #     'amount': amount
     # }
 
-    transaction = OrderedDict(          #we add this to order key value pairs in transactions => this is important to always get the same hash
+    transaction = OrderedDict(          #we add this to order key-value pairs in transactions => this is important to always get the same hash
                                         #it doesn't take normal dictionary as arguments, it takes list of TUPLES 
                                         #each TUPLE is key-value pair
         [('sender', sender), ('recipient', recipient), ('amount', amount)])
@@ -175,6 +285,9 @@ def add_transaction(recipient, sender=owner, amount=1.0):   #if we set sender=ow
         open_transactions.append(transaction)   #we store this transaction to open_transactions
         participants.add(sender)                #as the sender is Max this would be duplicated item but this line of code will be ignored since in set only go unique values
         participants.add(recipient)
+
+        save_data()     # here we write/save open_transactions to file
+
         return True
     else:
         return False
@@ -213,7 +326,7 @@ def mine_block():
     # }  
 
 
-    reward_transaction = OrderedDict(        #we add this to order key value pairs in transactions => this is important to always get the same hash
+    reward_transaction = OrderedDict(        #we add this to order key-value pairs in transactions => this is important to always get the same hash
                                              #it doesn't take normal dictionary as arguments, it takes list of TUPLES 
                                              #each TUPLE is key-value pair
         [('sender', 'MINING'), ('recipient', owner), ('amount', MINING_REWARD)])
@@ -244,6 +357,8 @@ def mine_block():
         'proof': proof
     }  
     blockchain.append(block)
+
+
     return True
     
 
@@ -439,6 +554,7 @@ while waiting_for_input:
     elif user_choice == '2':
         if mine_block():    #we call function mine_block here, and if this function return True open_transaction will be set to []
             open_transactions = []
+            save_data()     # here we write/save open_transactions to file
     elif user_choice == '3':
         print_blockchain_elements()
     elif user_choice == '4':
