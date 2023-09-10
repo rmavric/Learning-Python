@@ -67,52 +67,75 @@ def load_data():
     global blockchain               # lines below wanted to create new variables blockchain and open transactions
     global open_transactions        # that is why we need to tell python that those are global variables
     
-    #with open('blockchain.p', mode='rb') as f:
-    with open('blockchain.txt', mode='r') as f:
-        
-        file_content = f.readlines()
-        
-        # file_content = pickle.loads(f.read())       #this opens binary data and converts to python data
-        #                                             #this should give as dictionary as we created in save data
-        # blockchain = file_content['chain']
-        # open_transactions = file_content['ot']
-        
-        
-        blockchain = json.loads(file_content[0][:-1])       #this deserializes a string => takes string in json format and gives us back python object
-                                                            #this first line includes \n character so we should avoid reading it with [:-1]
+    try:    # try is used in case we don't have blockchain.txt file created yet -> then in except par, we create genesis:block
+            # we only need to try-except errors that can happen in run time and can't be avoided in ahed of time
 
 
-        # We need to convert the loaded data because Transactions should use OrderedDict
-        updated_blockchain = []
-        for block in blockchain:    #we are going throug every block in blockchain and convert transaction in OrderedDict of transactions
-                                    #because we always need to have the same hash
-                                    #we save then as orderedDict-s but we don't load them as such, so we need to convert transactions to orderedDicts
-            updated_block = {
-                'previous_hash': block['previous_hash'],    #this is unchanged
-                'index': block['index'],                    #this is unchanged
-                'proof': block['proof'],                    #this is unchanged
-                'transactions': [OrderedDict(   #we add this to order key-value pairs in transactions => this is important to always get the same hash
-                                                #it doesn't take normal dictionary as arguments, it takes list of TUPLES 
-                                                #each TUPLE is key-value pair
-                    [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount', tx['amount'])]) for tx in block['transactions']]
-                    #THIS IS A LIST COMPREHENSION
-            }
-            updated_blockchain.append(updated_block)
-        blockchain = updated_blockchain     # we now overwrite originally blockchain read from the file with new updated_blockchain that has
-                                            # transactions converted in orderedDict
+        #with open('blockchain.p', mode='rb') as f:
+        with open('blockchain.txt', mode='r') as f:
+            
+            file_content = f.readlines()
+            
+            # file_content = pickle.loads(f.read())       #this opens binary data and converts to python data
+            #                                             #this should give as dictionary as we created in save data
+            # blockchain = file_content['chain']
+            # open_transactions = file_content['ot']
+            
+            
+            blockchain = json.loads(file_content[0][:-1])       #this deserializes a string => takes string in json format and gives us back python object
+                                                                #this first line includes \n character so we should avoid reading it with [:-1]
 
 
-        open_transactions = json.loads(file_content[1])     #this deserializes a string => takes string in json format and gives us back python object
-        # We need to convert  the loaded data because Transactions should use OrderedDict
-        updated_transactions = []
-        for tx in open_transactions:
-            updated_transaction = OrderedDict(  #we add this to order key-value pairs in transactions => this is important to always get the same hash
-                                                #it doesn't take normal dictionary as arguments, it takes list of TUPLES 
-                                                #each TUPLE is key-value pair
-                [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount', tx['amount'])])
-            updated_transactions.append(updated_transaction)
-        open_transactions = updated_transactions
+            # We need to convert the loaded data because Transactions should use OrderedDict
+            updated_blockchain = []
+            for block in blockchain:    #we are going throug every block in blockchain and convert transaction in OrderedDict of transactions
+                                        #because we always need to have the same hash
+                                        #we save then as orderedDict-s but we don't load them as such, so we need to convert transactions to orderedDicts
+                updated_block = {
+                    'previous_hash': block['previous_hash'],    #this is unchanged
+                    'index': block['index'],                    #this is unchanged
+                    'proof': block['proof'],                    #this is unchanged
+                    'transactions': [OrderedDict(   #we add this to order key-value pairs in transactions => this is important to always get the same hash
+                                                    #it doesn't take normal dictionary as arguments, it takes list of TUPLES 
+                                                    #each TUPLE is key-value pair
+                        [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount', tx['amount'])]) for tx in block['transactions']]
+                        #THIS IS A LIST COMPREHENSION
+                }
+                updated_blockchain.append(updated_block)
+            blockchain = updated_blockchain     # we now overwrite originally blockchain read from the file with new updated_blockchain that has
+                                                # transactions converted in orderedDict
 
+
+            open_transactions = json.loads(file_content[1])     #this deserializes a string => takes string in json format and gives us back python object
+            # We need to convert  the loaded data because Transactions should use OrderedDict
+            updated_transactions = []
+            for tx in open_transactions:
+                updated_transaction = OrderedDict(  #we add this to order key-value pairs in transactions => this is important to always get the same hash
+                                                    #it doesn't take normal dictionary as arguments, it takes list of TUPLES 
+                                                    #each TUPLE is key-value pair
+                    [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount', tx['amount'])])
+                updated_transactions.append(updated_transaction)
+            open_transactions = updated_transactions
+ 
+
+    except IOError:     #it does something when error occurs, IOError is a error built in in python
+                        #multiple except statements can be added, or we can add multiple error types inside one except
+                        #except (IOError, ValueError)
+        # Our starting block for the blockchain
+        genesis_block = {
+            'previous_hash': '',
+            'index': 0,
+            'transactions': [],
+            'proof': 100
+        }
+        # Initializing our (empty) blockchain list
+        blockchain = [genesis_block]
+        # Unhandled transactions
+        open_transactions = []
+
+
+    finally:        #always run no matter if error occurs or not
+        print('Cleanup!')
 
 load_data()
 
