@@ -20,3 +20,8 @@ class Block(Printable):
         self.proof = proof
 
 
+    """
+    def __repr__(self):     #this can be inherited from printable.py
+        #return 'Index: {}, Previous Hash: {}, Proof: {}'.format(self.index, self.previous_hash, self.proof)
+        return str(self.__dict__)
+    """

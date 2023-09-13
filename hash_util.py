@@ -44,5 +44,10 @@ def hash_block(block):
                                                 #the previous reference (previous dictionary it got for the last block it hashed)
     
     
-    #hashable_block['transactions'] = [tx.to_ordered_dict() for tx in hashable_block['transactions']]
+    # we need to convert transactions t oordered_dict
+    # copy() above is needed because now we need to manipulate with that hashable_block
+    hashable_block['transactions'] = [tx.to_ordered_dict() for tx in hashable_block['transactions']]
+
+
+
     return hash_string_256(json.dumps(hashable_block, sort_keys=True).encode())
