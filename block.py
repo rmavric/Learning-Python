@@ -1,6 +1,6 @@
 from time import time           #for timestamp
 
-from printable import Printable
+from utility.printable import Printable
 
 class Block(Printable):
     """A single block of our blockchain.

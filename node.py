@@ -1,7 +1,12 @@
 from uuid import uuid4
 
 from blockchain import Blockchain
-from verification import Verification
+#from verification import Verification
+
+from utility.verification import Verification
+
+from wallet import Wallet
+
 
 class Node:
     """The node which runs the local blockchain instance.
@@ -11,10 +16,16 @@ class Node:
         :blockchain: The blockchain which is run by this node.
     """
     def __init__(self):
-        #self.id = str(uuid4())
+        #self.wallet.public_key = str(uuid4())
         #self.blockchain = []
-        self.id = 'MAX'             # just to use as dummy ID, it is better with unique ID
-        self.blockchain = Blockchain(self.id)
+        #self.wallet = None
+        self.wallet = Wallet()
+        # self.wallet.create_keys()
+
+        #self.wallet.public_key = 'MAX'             # just to use as dummy ID, it is better with unique ID
+        #self.blockchain = None
+        self.wallet.create_keys()
+        self.blockchain = Blockchain(self.wallet.public_key)
         
 
 
@@ -69,8 +80,11 @@ class Node:
             print('1: Add a new transaction value')
             print('2: Mine a new block')
             print('3: Output the blockchain blocks')
-            print('4: Output participants')
-            print('5: Check transaction validity')
+            # print('4: Output participants')
+            print('4: Check transaction validity')
+            print('5: Create wallet')
+            print('6: Load wallet')
+            print('7: Save keys')
             print('h: Manipulate the chain')
             print('q: Quit')
             user_choice = self.get_user_choice()
@@ -80,14 +94,22 @@ class Node:
                 tx_data = self.get_transaction_value()       #   here we get the data from TUPLE
                 recipient, amount = tx_data             #   DATA UNPACKING => because tx_data is a TUPLE we extract data from TUPLE like this
                                                         #   first element of the TUPLE is stored in recipient, and second one is stored in amount
-                # Add the transaction amount to the blockchain
-                if self.blockchain.add_transaction(recipient, self.id, amount=amount):       #   this data is now added to open_transactions
+
+                signature = self.wallet.sign_transaction(self.wallet.public_key, recipient, amount)
+                                                        #sender                #recipient   #amount
+
+                # # Add the transaction amount to the blockchain
+                # if self.blockchain.add_transaction(recipient, self.wallet.public_key, amount=amount):       #   this data is now added to open_transactions
+                #                                                     #   here we avoid parameter sender because it is optional
+                #                                                     #   amount = amount => this we need to set if we omit sender parameter
+
+                if self.blockchain.add_transaction(recipient, self.wallet.public_key, signature, amount=amount):       #   this data is now added to open_transactions
                                                                     #   here we avoid parameter sender because it is optional
                                                                     #   amount = amount => this we need to set if we omit sender parameter
                     print('Added transaction!')
                 else:
                     print('Transaction failed!')
-                print(self.blockchain.open_transactions)
+                print(self.blockchain.get_open_transactions())
            
            
             elif user_choice == '2':
@@ -95,8 +117,10 @@ class Node:
                     #open_transactions = []
                     #self.blockchain.save_data()     # here we write/save open_transactions to file
                     #THOSE TWO LINES WE NOW ADDED TO BLOCKCHAIN => MINE_BLOCK method
-                    self.blockchain.mine_block()    # => WE DON?T NEED TO CHECK IF THIS IS SUCCESSFUL BECAUSE IT CAN'T FAIL ANYWAY
-          
+                    #self.blockchain.mine_block()    # => WE DON'T NEED TO CHECK IF THIS IS SUCCESSFUL BECAUSE IT CAN'T FAIL ANYWAY
+
+                    if not self.blockchain.mine_block():
+                        print('Mining failed. Got no wallet?')          #if we don't have a wallet we can't mine blocks
           
             elif user_choice == '3':
                 self.print_blockchain_elements()
@@ -108,7 +132,7 @@ class Node:
                 print(participants)
                 """
           
-            elif user_choice == '5':
+            elif user_choice == '4':
                 #verifier = Verification()
                 # if verifier.verify_transactions(self.blockchain.open_transactions, self.blockchain.get_balance):
                 # this is now class method so it could be called on CLASS and not on instance
@@ -129,6 +153,28 @@ class Node:
                         'transactions': [{'sender': 'Cris', 'recipient': 'Max', 'amonut': 100.0}]
                     }
                 """
+
+
+            elif user_choice == '5':
+                #self.wallet = Wallet()
+                self.wallet.create_keys()
+                self.blockchain = Blockchain(self.wallet.public_key)
+            
+            
+            
+            
+            elif user_choice == '6':
+                self.wallet.load_keys()
+                self.blockchain = Blockchain(self.wallet.public_key)
+
+
+
+
+            elif user_choice == '7':
+                self.wallet.save_keys()
+
+
+
         
             elif user_choice == 'q':
                 # This will lead to the loop to exist because it's running condition becomes False
@@ -149,7 +195,7 @@ class Node:
                 break
 
             # print(get_balance('Max'))
-            print('Balance of {}: {:6.2f}'.format(self.id, self.blockchain.get_balance()))
+            print('Balance of {}: {:6.2f}'.format(self.wallet.public_key, self.blockchain.get_balance()))
         else:
             print('User left!')
 
@@ -164,5 +210,12 @@ class Node:
 
 
 #we need to instanciate Node and call method that will run when we execute node.py
-node = Node()
-node.listen_for_input()
+if __name__ == '__main__':
+    node = Node()
+    node.listen_for_input()
+
+
+# print(__name__) # => it prints out '__main__' => this is automatically saved into __name__
+#                 # => that means that we executed this script directly with python node.py
+#                 # it prints '__main__' because it is not imported anywhere it is main
+#                 #if we would import it somewhere it would print 'node'

@@ -7,18 +7,28 @@ from collections import OrderedDict     #for order dictionaries because we need 
                                         #if key-value pairs in dictionaries change positions hash would be different
 
 # Import two functions from our hash_util.py file. Omit the ".py" in the import
-from hash_util import hash_string_256, hash_block
+# from hash_util import hash_string_256, hash_block
 import pickle       # convert python data to binary data => it can serialize and deserialize data
 
 from block import Block
 from transaction import Transaction
-from verification import Verification
+# from verification import Verification
+
+from utility.hash_util import hash_block
+from utility.verification import Verification
+
+from wallet import Wallet
 
 
 #capital letters mean that this is a global constant -> this value should stay unchanged
 MINING_REWARD = 10  #this is a reward that should be given to a person that creates a new block
 
 
+
+
+print(__name__) # => it prints out 'blockchain' => this is the name of the script
+                # it prints that because blockchain is imported into node.py
+                # => we executed this script with python node.py
 
 
 
@@ -174,7 +184,8 @@ class Blockchain:   #BLOCKCHAIN is actually a class, and CHAIN is chain of block
                     #after TRANSACTION CLASS is created this is not necessary anymore
                     #converted_tx = [OrderedDict(('sender', tx['sender']), ('recipient', tx['recipient']), ('amount', tx['amount'])) for tx in block['transactions']]
 
-                    converted_tx = [Transaction(tx['sender'], tx['recipient'], tx['amount']) for tx in block['transactions']]
+                    converted_tx = [Transaction(
+                        tx['sender'], tx['recipient'], tx['signature'], tx['amount']) for tx in block['transactions']]
                 
                     updated_block = Block(      #block is not dictionary anymore, now it is a BLOCK OBJECT
                         block['index'], 
@@ -211,7 +222,8 @@ class Blockchain:   #BLOCKCHAIN is actually a class, and CHAIN is chain of block
                 """
 
                 for tx in open_transactions:
-                        updated_transaction = Transaction(tx['sender'], tx['recipient'], tx['amount'])
+                        updated_transaction = Transaction(
+                            tx['sender'], tx['recipient'], tx['signature'], tx['amount'])
                         updated_transactions.append(updated_transaction)
                 
 
@@ -435,7 +447,7 @@ class Blockchain:   #BLOCKCHAIN is actually a class, and CHAIN is chain of block
 
     #here we store new transaction
     #def add_transaction(recipient, sender=owner, amount=1.0):   #if we set sender=owner and amount = 1.0 now those two are optional parameters
-    def add_transaction(self, recipient, sender, amount=1.0):
+    def add_transaction(self, recipient, sender, signature, amount=1.0):
         """ Append a new value as well as the last blockchain value to the blockchain.
 
         Arguments:
@@ -451,6 +463,9 @@ class Blockchain:   #BLOCKCHAIN is actually a class, and CHAIN is chain of block
         #     'amount': amount
         # }
 
+        if self.hosting_node == None:       #if it is None we shouldn't be able to add_transactions
+            return False
+
         """
         transaction = OrderedDict(          #we add this to order key-value pairs in transactions => this is important to always get the same hash
                                             #it doesn't take normal dictionary as arguments, it takes list of TUPLES 
@@ -458,7 +473,11 @@ class Blockchain:   #BLOCKCHAIN is actually a class, and CHAIN is chain of block
             [('sender', sender), ('recipient', recipient), ('amount', amount)])
         """
         #this is changed when we added TRANSACTION CLASS
-        transaction = Transaction(sender, recipient, amount)
+        transaction = Transaction(sender, recipient, signature, amount)
+
+
+        # if not Wallet.verify_transaction(transaction):
+        #     return False
 
 
         #verifier = Verification()
@@ -524,9 +543,9 @@ class Blockchain:   #BLOCKCHAIN is actually a class, and CHAIN is chain of block
         """
 
         #reward_transaction = Transaction('MINING', owner, MINING_REWARD) 
-        reward_transaction = Transaction('MINING', self.hosting_node, MINING_REWARD)   # => AFTER WE ADDED BLOCKCHAIN CLASS
+        reward_transaction = Transaction('MINING', self.hosting_node, '', MINING_REWARD)   # => AFTER WE ADDED BLOCKCHAIN CLASS
                                                                                     #hosting-node is node that did the mining
-
+                                                                                    #here we don't have signature where we are mining
 
         #copied_transactions = open_transactions     #lists are copied by reference and not by value so this doesn't work
                                                     #this would mean that both lists would point to the same address in memory
@@ -539,6 +558,12 @@ class Blockchain:   #BLOCKCHAIN is actually a class, and CHAIN is chain of block
         #open_transactions.append(reward_transaction)       => now we use buttom one
 
         copied_transactions = self.__open_transactions     # => AFTER WE ADDED BLOCKCHAIN CLASS
+
+
+        for tx in copied_transactions:
+            if not Wallet.verify_transaction(tx):
+                return False
+
 
         copied_transactions.append(reward_transaction)
 
@@ -561,6 +586,8 @@ class Blockchain:   #BLOCKCHAIN is actually a class, and CHAIN is chain of block
         #block = Block(len(blockchain), hashed_block, copied_transactions, proof)
         block = Block(len(self.__chain), hashed_block, copied_transactions, proof)    # => AFTER WE ADDED BLOCKCHAIN CLASS
 
+
+        
 
 
         #blockchain.append(block)
@@ -917,3 +944,60 @@ class Blockchain:   #BLOCKCHAIN is actually a class, and CHAIN is chain of block
 
 # MyMath.add()      => methods all called directly on classes
                    #=> we can't access variables that are inside this method
+
+
+
+
+
+# TO BE ABLE TO IMPORT SCRIPTS FROM UTILITY FOLDER WE NEED TO ADD __init__.py file into that folder
+
+
+
+
+
+# pycache folder -> pythons is compiled to byte code -> this folder contains this byte code
+            #    -> when we start code again it doesn't compile everything again it uses this precompiled byte code
+
+
+
+
+
+#IMPORTS
+# import hashlib as _hl                   #this means that hl will not be imported
+# from utility.hash_util import *         #and now this will have a problem because hl is not imported, and
+                                          #hash_util is using hl in code
+
+
+
+# import hashlib as _hl 
+# import json
+# __all__ = ['hash_string_256', 'hash_block']
+# from utility.hash_util import *
+
+
+#use _ to tell Python to not import it (when using *)
+#use __all__ to control Exports (when using *)
+
+
+
+
+
+
+#PRIVATE KEY
+# it creates signature for every outgoing transaction and holds data about sender, recipient and amount
+
+
+
+
+#PUBLIC KEY
+# it can't read this signature created with private key but it can verify if signature is created with private key
+
+
+
+
+
+
+# ANACONDA
+# - create environment => name - pycoin
+# - in cmd execute => cmd "/K" C:\Users\ratko\anaconda3\Scripts\activate.bat C:\Users\ratko\anaconda3 
+# - in cmd navigate to the folder of program: activate pycoin

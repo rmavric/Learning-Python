@@ -1,4 +1,6 @@
-from hash_util import hash_string_256, hash_block
+from utility.hash_util import hash_string_256, hash_block
+from wallet import Wallet
+
 
 class Verification:
     """A helper class which offer various static and class-based verification and validation methods."""
@@ -51,14 +53,20 @@ class Verification:
     @staticmethod   # it's ok that this is static method because it works only with inputs that are arriving as arguments
                     # it doesn't access to anything from a class
                     # it doesn't need self as argument
-    def verify_transaction(transaction, get_balance):
+    def verify_transaction(transaction, get_balance, check_funds=True):
         """Verify a transaction by checking whether the sender has sufficient coins.
 
         Arguments:
             :transaction: The transaction that should be verified.
         """
-        sender_balance = get_balance()      #get balance takes the hosting_node_id defined in Blockchain class
-        return sender_balance >= transaction.amount
+        # sender_balance = get_balance()      #get balance takes the hosting_node_id defined in Blockchain class
+        # return sender_balance >= transaction.amount
+    
+        if check_funds:
+            sender_balance = get_balance()
+            return sender_balance >= transaction.amount and Wallet.verify_transaction(transaction)
+        else:
+            return Wallet.verify_transaction(transaction)
 
 
 
@@ -70,4 +78,4 @@ class Verification:
     def verify_transactions(cls, open_transactions, get_balance):
         """Verifies all open transactions."""
         #return all([self.verify_transaction(tx, get_balance) for tx in open_transactions])
-        return all([cls.verify_transaction(tx, get_balance) for tx in open_transactions])
+        return all([cls.verify_transaction(tx, get_balance, False) for tx in open_transactions])
